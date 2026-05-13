@@ -1,0 +1,10 @@
+UserID,GameTitle,Genre,HoursTotal,HoursLast30Days,LastPlayed,SkillPercentile,SessionPattern,Notes
+HOSP_99,Stardew Valley,Cozy/farming sim,142,48,2 hours ago,87,Late-night daily,"Recent 30 days = 34% of all-time hours — escalating comfort-seeking"
+HOSP_99,Animal Crossing: New Horizons,Cozy/social sim,89,22,yesterday,72,Late evening,"Steady late-evening play; island progress paused 6 weeks ago"
+HOSP_99,Slay the Spire,Roguelike deckbuilder,18,3,5 days ago,41,Sporadic,"Briefly returned after 4-month break"
+HOSP_100,Mario Kart 8 Deluxe,Party/racing,67,15,3 days ago,64,Weekends with friends,"Plays with two consistent friends — strong social signal"
+HOSP_100,Among Us,Social deduction,23,8,last week,58,Online with strangers,"Lighter recent play, mostly drop-in/drop-out"
+HOSP_100,FIFA 24,Sports,11,2,2 weeks ago,52,Sporadic,"Casual"
+HOSP_101,Genshin Impact,Action RPG,234,4,last week,91,Sporadic,"Long-term hobbyist (18 months); recent drop-off in engagement"
+HOSP_101,Stardew Valley,Cozy/farming sim,12,0,2 months ago,38,No recent play,"Tried briefly, not a current pattern"
+HOSP_101,Honkai: Star Rail,Turn-based RPG,76,3,last week,78,Sporadic,"Logs in for daily quests only"
