@@ -1,0 +1,1711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LMN-SPN · Referral Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    /* Lake Macquarie & Newcastle SPN brand palette */
+    --brand-teal:        #1F4F5C;
+    --brand-teal-dark:   #133842;
+    --brand-teal-light:  #2D6B7C;
+    --brand-teal-ghost:  rgba(31, 79, 92, 0.08);
+    --brand-orange:      #E89B30;
+    --brand-orange-dark: #C46517;
+    --brand-cream:       #F4E5C2;
+    --brand-cream-soft:  #FBF3DE;
+    --surface:           #FAFAF9;
+    --surface-elev:      #FFFFFF;
+    --ink:               #1A2730;
+    --ink-soft:          #4E6068;
+    --line:              #E5E7EB;
+    /* Fluent-style elevations */
+    --elev-1: 0 1px 2px rgba(15,30,42,.04), 0 1px 1px rgba(15,30,42,.04);
+    --elev-2: 0 2px 4px rgba(15,30,42,.06), 0 4px 8px rgba(15,30,42,.04);
+    --elev-3: 0 4px 8px rgba(15,30,42,.06), 0 12px 24px rgba(15,30,42,.08);
+  }
+  html, body { background: var(--surface); color: var(--ink); }
+  body {
+    font-family: "Segoe UI Variable", "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Fluent-style focus ring */
+  *:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+  /* Brand button (primary) */
+  .btn-brand {
+    background: var(--brand-teal); color: #fff;
+    border: 1px solid var(--brand-teal-dark);
+    box-shadow: var(--elev-1);
+    transition: background .15s ease, box-shadow .15s ease, transform .05s ease;
+  }
+  .btn-brand:hover { background: var(--brand-teal-dark); box-shadow: var(--elev-2); }
+  .btn-brand:active { transform: translateY(1px); }
+  /* Brand accent button (warm) */
+  .btn-warm {
+    background: var(--brand-orange); color: var(--brand-teal-dark);
+    border: 1px solid var(--brand-orange-dark);
+    box-shadow: var(--elev-1);
+    transition: background .15s ease, box-shadow .15s ease;
+  }
+  .btn-warm:hover { background: var(--brand-orange-dark); color: #fff; box-shadow: var(--elev-2); }
+  /* Subtle elevation cards (Fluent "card on surface") */
+  .surface-card {
+    background: var(--surface-elev);
+    border: 1px solid var(--line);
+    box-shadow: var(--elev-1);
+    border-radius: 10px;
+    transition: box-shadow .2s ease, transform .15s ease, border-color .15s ease;
+  }
+  .surface-card:hover { box-shadow: var(--elev-2); }
+  .surface-card-interactive:hover {
+    border-color: var(--brand-teal);
+    transform: translateY(-1px);
+    box-shadow: var(--elev-3);
+  }
+  /* Acrylic-ish header */
+  .acrylic {
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+  }
+  /* Tag chip */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    border: 1px solid currentColor;
+  }
+  /* Pipeline column accent strip */
+  .col-accent { height: 3px; border-radius: 3px 3px 0 0; }
+  /* Existing helpers */
+  .dot-typing::after { content: ''; display: inline-block; width: 18px; text-align: left; animation: dots 1.2s steps(4, end) infinite; }
+  @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
+  .agent-stream { white-space: pre-wrap; font-family: ui-monospace, "SF Mono", "Consolas", monospace; font-size: 12px; }
+  .pulse-ring { box-shadow: 0 0 0 0 rgba(31, 79, 92, 0.7); animation: ring 1.6s infinite; }
+  @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(31, 79, 92, 0.55);} 70% { box-shadow: 0 0 0 14px rgba(31, 79, 92, 0);} 100% { box-shadow: 0 0 0 0 rgba(31, 79, 92, 0);} }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .kanban-col { min-width: 280px; max-width: 320px; }
+  .conn-pulse { animation: connpulse 2s infinite; }
+  @keyframes connpulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+  /* Logo */
+  .lmn-logo { display: inline-block; flex-shrink: 0; }
+  /* Subtle Fluent reveal — softer border highlight on hover */
+  .reveal { position: relative; overflow: hidden; }
+  .reveal::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(31,79,92,0.06), transparent 60%);
+    opacity: 0; transition: opacity .2s ease;
+  }
+  .reveal:hover::after { opacity: 1; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<!-- ============================================================
+     VIEW 1 — LOGIN SCREEN
+============================================================ -->
+<section id="view-login" class="min-h-screen grid place-items-center px-6 py-12 relative">
+  <!-- Soft brand wash -->
+  <div class="absolute inset-0 -z-10 pointer-events-none" style="background:
+      radial-gradient(800px circle at 15% 10%, rgba(31,79,92,0.06), transparent 60%),
+      radial-gradient(700px circle at 90% 90%, rgba(232,155,48,0.08), transparent 60%);"></div>
+
+  <div class="max-w-3xl w-full">
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center gap-5 mb-2">
+        <svg viewBox="0 0 120 140" class="lmn-logo" width="76" height="89" aria-label="LMN-SPN logo" role="img">
+          <circle cx="60" cy="55" r="42" fill="#F4E5C2"/>
+          <circle cx="60" cy="55" r="28" fill="#E89B30"/>
+          <circle cx="60" cy="55" r="15" fill="#C46517"/>
+          <path d="M60 92 C 50 100 30 108 16 124 C 36 124 52 116 60 102 Z" fill="#1F4F5C"/>
+          <path d="M60 92 C 70 100 90 108 104 124 C 84 124 68 116 60 102 Z" fill="#1F4F5C"/>
+        </svg>
+        <div class="text-left">
+          <div class="text-base font-medium leading-tight" style="color: var(--brand-teal);">Lake Macquarie<br/>&amp; Newcastle</div>
+          <div class="text-3xl font-bold leading-tight tracking-tight" style="color: var(--brand-teal);">Suicide Prevention<br/>Network</div>
+        </div>
+      </div>
+      <div class="text-sm" style="color: var(--ink-soft);">Referral Pipeline Portal</div>
+      <p class="mt-6 text-sm max-w-lg mx-auto" style="color: var(--ink-soft);">Hospital intake to AI-assisted induction to volunteer match. Select your role to continue.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <button onclick="loginAs('hospital')" class="surface-card surface-card-interactive reveal p-6 text-left">
+        <div class="w-11 h-11 rounded-lg grid place-items-center mb-4" style="background: var(--brand-teal-ghost); color: var(--brand-teal);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </div>
+        <div class="font-semibold text-base" style="color: var(--ink);">Hospital Staff</div>
+        <div class="text-xs mt-1" style="color: var(--ink-soft);">Create new referrals, run inductions, watch the pipeline.</div>
+      </button>
+
+      <button onclick="loginAs('admin')" class="surface-card surface-card-interactive reveal p-6 text-left">
+        <div class="w-11 h-11 rounded-lg grid place-items-center mb-4" style="background: rgba(196,101,23,0.10); color: var(--brand-orange-dark);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
+        </div>
+        <div class="font-semibold text-base" style="color: var(--ink);">Admin / Coordinator</div>
+        <div class="text-xs mt-1" style="color: var(--ink-soft);">Full visibility, override matches, edit volunteer roster.</div>
+      </button>
+
+      <button onclick="loginAs('volunteer')" class="surface-card surface-card-interactive reveal p-6 text-left">
+        <div class="w-11 h-11 rounded-lg grid place-items-center mb-4" style="background: rgba(232,155,48,0.14); color: var(--brand-orange-dark);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="font-semibold text-base" style="color: var(--ink);">Volunteer (Demo)</div>
+        <div class="text-xs mt-1" style="color: var(--ink-soft);">See your next assignment. Logged in as Sarah J. by default.</div>
+      </button>
+    </div>
+
+    <div class="text-center mt-8 text-xs" style="color: var(--ink-soft);">
+      Powered by Azure AI Foundry · <span style="color: var(--brand-orange-dark); font-weight: 600;">Lifeline 13 11 14</span> always one tap away
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     VIEW 2 — APP SHELL (hidden until login)
+============================================================ -->
+<div id="view-app" class="hidden">
+<header class="acrylic border-b sticky top-0 z-30" style="border-color: var(--line);">
+  <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <svg viewBox="0 0 120 140" width="36" height="42" class="lmn-logo" aria-label="LMN-SPN" role="img">
+        <circle cx="60" cy="55" r="42" fill="#F4E5C2"/>
+        <circle cx="60" cy="55" r="28" fill="#E89B30"/>
+        <circle cx="60" cy="55" r="15" fill="#C46517"/>
+        <path d="M60 92 C 50 100 30 108 16 124 C 36 124 52 116 60 102 Z" fill="#1F4F5C"/>
+        <path d="M60 92 C 70 100 90 108 104 124 C 84 124 68 116 60 102 Z" fill="#1F4F5C"/>
+      </svg>
+      <div>
+        <div class="text-sm font-semibold leading-tight" style="color: var(--brand-teal);">Lake Macquarie &amp; Newcastle SPN</div>
+        <div class="text-[11px] leading-tight" style="color: var(--ink-soft);">Referral Pipeline · Hospital → AI Induction → Volunteer</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 md:gap-3">
+      <span id="connBadge" class="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-white/60" style="color: var(--ink-soft); border-color: var(--line);" title="Connection to Foundry via proxy">
+        <span class="w-2 h-2 rounded-full bg-slate-400 conn-pulse" id="connDot"></span>
+        <span id="connLabel">Mock mode</span>
+      </span>
+      <span id="roleBadge" class="px-2.5 py-1 rounded text-xs font-semibold" style="background: var(--brand-teal-ghost); color: var(--brand-teal); border: 1px solid rgba(31,79,92,0.2);">—</span>
+      <button id="settingsBtn" onclick="openSettings()" class="text-sm w-8 h-8 grid place-items-center rounded-md hover:bg-black/5" style="color: var(--ink-soft);" title="Live mode / proxy settings" aria-label="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="crisisBtn" class="text-sm font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5" style="background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L1 22h22L12 1z"/></svg>
+        Lifeline 13 11 14
+      </button>
+      <button onclick="logout()" class="text-sm px-2.5 py-1 rounded hover:bg-black/5" style="color: var(--ink-soft);">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     VIEW 2A — HOSPITAL / ADMIN MAIN
+============================================================ -->
+<main id="view-staff" class="max-w-7xl mx-auto px-6 py-6 hidden">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Referral Dashboard</h1>
+      <p class="text-sm text-slate-500" id="staffSubtitle">Track every user from hospital handover to second-call decision.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="inline-flex rounded-md border border-slate-300 overflow-hidden">
+        <button id="viewModeKanban" onclick="setViewMode('kanban')" class="px-3 py-1.5 text-sm font-medium" style="background: var(--brand-teal); color: white;">Kanban</button>
+        <button id="viewModeTable" onclick="setViewMode('table')" class="px-3 py-1.5 text-sm font-medium bg-white text-slate-700">Table</button>
+      </div>
+      <button onclick="openIntake()" class="btn-brand px-4 py-2 rounded-md font-medium">
+        + New Hospital Referral
+      </button>
+    </div>
+  </div>
+
+  <!-- Pipeline counts -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+    <div class="bg-white rounded-lg border border-slate-200 p-3">
+      <div class="text-xs uppercase tracking-wide text-slate-500">Awaiting Induction</div>
+      <div id="cnt-pending" class="text-2xl font-bold text-amber-600">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-3">
+      <div class="text-xs uppercase tracking-wide text-slate-500">Awaiting Match</div>
+      <div id="cnt-inducted" class="text-2xl font-bold text-blue-600">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-3">
+      <div class="text-xs uppercase tracking-wide text-slate-500">First Call Booked</div>
+      <div id="cnt-matched" class="text-2xl font-bold text-indigo-600">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-3">
+      <div class="text-xs uppercase tracking-wide text-slate-500">Second-Call Decision</div>
+      <div id="cnt-postcall" class="text-2xl font-bold text-purple-600">0</div>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-3">
+      <div class="text-xs uppercase tracking-wide text-slate-500">Completed</div>
+      <div id="cnt-done" class="text-2xl font-bold text-emerald-600">0</div>
+    </div>
+  </div>
+
+  <!-- KANBAN BOARD -->
+  <div id="kanbanWrap" class="overflow-x-auto pb-4">
+    <div id="kanbanBoard" class="flex gap-4 min-w-fit"></div>
+  </div>
+
+  <!-- TABLE (toggleable) -->
+  <div id="tableWrap" class="bg-white rounded-lg border border-slate-200 overflow-hidden hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600">
+        <tr>
+          <th class="text-left px-4 py-2 font-medium">UserID</th>
+          <th class="text-left px-4 py-2 font-medium">Risk</th>
+          <th class="text-left px-4 py-2 font-medium">Language</th>
+          <th class="text-left px-4 py-2 font-medium">Contact</th>
+          <th class="text-left px-4 py-2 font-medium">Persona</th>
+          <th class="text-left px-4 py-2 font-medium">Assigned</th>
+          <th class="text-left px-4 py-2 font-medium">Status</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Volunteer registry -->
+  <details class="mt-6 bg-white rounded-lg border border-slate-200 p-4" id="volRegistryWrap">
+    <summary class="font-semibold text-slate-900 flex items-center justify-between">
+      <span>Volunteer Registry <span id="volRegistryHint" class="text-xs text-slate-500 font-normal ml-2"></span></span>
+      <span class="text-xs text-slate-500">Click to expand</span>
+    </summary>
+    <div class="mt-3 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr>
+            <th class="text-left px-3 py-2 font-medium">ID</th>
+            <th class="text-left px-3 py-2 font-medium">Name</th>
+            <th class="text-left px-3 py-2 font-medium">Accred</th>
+            <th class="text-left px-3 py-2 font-medium">Specialties</th>
+            <th class="text-left px-3 py-2 font-medium">Language</th>
+            <th class="text-left px-3 py-2 font-medium">Load</th>
+            <th class="text-left px-3 py-2 font-medium">Status</th>
+            <th class="text-left px-3 py-2 font-medium">Persona</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody id="volTable"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Admin-only controls -->
+  <div id="adminControls" class="mt-4 hidden">
+    <details class="bg-purple-50/50 border border-purple-200 rounded-lg p-3">
+      <summary class="font-semibold text-purple-900">Admin controls</summary>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button onclick="resetDemo()" class="text-xs px-3 py-1.5 rounded bg-white border border-purple-300 text-purple-700 hover:bg-purple-100">Reset demo data</button>
+        <button onclick="seedSampleFlow()" class="text-xs px-3 py-1.5 rounded bg-white border border-purple-300 text-purple-700 hover:bg-purple-100">Add 3 sample referrals</button>
+        <button onclick="exportState()" class="text-xs px-3 py-1.5 rounded bg-white border border-purple-300 text-purple-700 hover:bg-purple-100">Export state (JSON)</button>
+      </div>
+    </details>
+  </div>
+</main>
+
+
+<!-- ============================================================
+     VIEW 2B — VOLUNTEER DEMO
+============================================================ -->
+<main id="view-volunteer" class="max-w-3xl mx-auto px-6 py-8 hidden">
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 grid place-items-center font-bold text-xl">S</div>
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">Logged in as</div>
+        <div class="font-semibold text-slate-900 text-lg">Sarah J. <span class="font-mono text-xs text-slate-500">VOL_001</span></div>
+        <div class="text-sm text-slate-600" id="volStats">Accreditation 3 (Crisis) · English · Load: 0</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="text-xl font-bold text-slate-900 mb-3">Your next assignment</h2>
+  <div id="volNextCard"></div>
+
+  <h2 class="text-xl font-bold text-slate-900 mt-8 mb-3">Recent calls</h2>
+  <div id="volHistoryList" class="space-y-2"></div>
+</main>
+</div><!-- /view-app -->
+
+<!-- Modal root -->
+<div id="modalRoot"></div>
+
+
+<script>
+/* =====================================================================
+   0. STATE & ROLES
+   ===================================================================== */
+const ROLE_KEY = "ngm_role_v1";
+const SETTINGS_KEY = "ngm_settings_v1";
+
+function getRole(){ return localStorage.getItem(ROLE_KEY) || ""; }
+function setRole(r){ localStorage.setItem(ROLE_KEY, r); }
+function isAdmin(){ return getRole() === "admin"; }
+function isStaff(){ const r=getRole(); return r==="hospital"||r==="admin"; }
+
+const DEFAULT_SETTINGS = { useLive: false, proxyUrl: "http://127.0.0.1:5000" };
+function getSettings(){
+  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") }; }
+  catch(e){ return { ...DEFAULT_SETTINGS }; }
+}
+function setSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+function loginAs(role){
+  setRole(role);
+  applyRole();
+}
+function logout(){
+  localStorage.removeItem(ROLE_KEY);
+  applyRole();
+}
+function applyRole(){
+  const role = getRole();
+  document.getElementById("view-login").classList.toggle("hidden", !!role);
+  document.getElementById("view-app").classList.toggle("hidden", !role);
+  if (!role) return;
+
+  document.getElementById("view-staff").classList.toggle("hidden", role === "volunteer");
+  document.getElementById("view-volunteer").classList.toggle("hidden", role !== "volunteer");
+  document.getElementById("adminControls").classList.toggle("hidden", role !== "admin");
+  document.getElementById("volRegistryHint").textContent = role === "admin" ? "(admin can edit)" : "(read-only)";
+
+  const badge = document.getElementById("roleBadge");
+  if (role === "hospital") {
+    badge.textContent = "🏥 Hospital";
+    badge.className = "px-2 py-1 rounded text-xs font-semibold bg-[#1F4F5C]/[0.08] text-[#1F4F5C] border border-[#1F4F5C]/20";
+    document.getElementById("staffSubtitle").textContent = "Create and track referrals from your hospital.";
+  } else if (role === "admin") {
+    badge.textContent = "⚙ Admin";
+    badge.className = "px-2 py-1 rounded text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200";
+    document.getElementById("staffSubtitle").textContent = "Full system view. Override matches, edit volunteers, monitor agents.";
+  } else if (role === "volunteer") {
+    badge.textContent = "💚 Volunteer";
+    badge.className = "px-2 py-1 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+  }
+
+  render();
+  pingProxy(); // refresh connection badge
+}
+
+/* =====================================================================
+   1. MOCK "DATABASE"
+   ===================================================================== */
+const SEED_VOLUNTEERS = [
+  { id:"VOL_001", name:"Sarah J.",  accred:3, accredLabel:"3 (Crisis)",  specialties:"Youth, Lived Experience",            language:"English",            currentLoad:2, status:"Available", persona:"Warm, energetic, patient" },
+  { id:"VOL_002", name:"Mark T.",   accred:2, accredLabel:"2 (Peer)",    specialties:"Financial Stress, Men's Health",     language:"English",            currentLoad:4, status:"Busy",      persona:"Direct, proactive, calm" },
+  { id:"VOL_003", name:"Priya N.",  accred:3, accredLabel:"3 (Crisis)",  specialties:"Anxiety, Cultural Identity",         language:"English, Hindi",     currentLoad:1, status:"Available", persona:"Empathetic, soft-spoken, reflective" },
+  { id:"VOL_004", name:"Diego R.",  accred:2, accredLabel:"2 (Peer)",    specialties:"Substance Recovery, Family Conflict",language:"English, Spanish",   currentLoad:3, status:"Available", persona:"Steady, non-judgemental, encouraging" },
+  { id:"VOL_005", name:"Aroha W.",  accred:1, accredLabel:"1 (General)", specialties:"Loneliness, Grief",                  language:"English, Te Reo",    currentLoad:0, status:"Available", persona:"Gentle, attentive listener" },
+  { id:"VOL_006", name:"Tom K.",    accred:3, accredLabel:"3 (Crisis)",  specialties:"Suicidal Ideation, Veterans",        language:"English",            currentLoad:5, status:"Busy",      persona:"Composed, grounded, decisive" },
+  { id:"VOL_007", name:"Mei L.",    accred:2, accredLabel:"2 (Peer)",    specialties:"Workplace Burnout, Anxiety",         language:"English, Mandarin",  currentLoad:2, status:"Available", persona:"Practical, warm, structured" },
+  { id:"VOL_008", name:"Jordan B.", accred:1, accredLabel:"1 (General)", specialties:"LGBTQ+ Support, Youth",              language:"English",            currentLoad:1, status:"Available", persona:"Affirming, upbeat, curious" },
+];
+const SEED_USERS = [
+  { id:"HOSP_99",  status:"Pending",  riskLevel:"High",   language:"English",            contactMethod:"Phone (Evening)", personaNotes:"", assignedVol:"", firstCall:null, secondCallVol:"", stressors:"", presenting:"", createdAt:"2026-05-12 09:14" },
+  { id:"HOSP_100", status:"Pending",  riskLevel:"Medium", language:"English, Spanish",   contactMethod:"SMS (Daytime)",   personaNotes:"", assignedVol:"", firstCall:null, secondCallVol:"", stressors:"", presenting:"", createdAt:"2026-05-12 09:21" },
+  { id:"HOSP_101", status:"Pending",  riskLevel:"Low",    language:"English, Mandarin",  contactMethod:"Email",           personaNotes:"", assignedVol:"", firstCall:null, secondCallVol:"", stressors:"", presenting:"", createdAt:"2026-05-12 09:33" },
+];
+
+const DB_KEY = "ngm_referral_db_v1";
+function loadDB(){
+  const raw = localStorage.getItem(DB_KEY);
+  if (raw) { try { return JSON.parse(raw); } catch(e){} }
+  const init = { users:[...SEED_USERS], volunteers:[...SEED_VOLUNTEERS], nextId:102 };
+  localStorage.setItem(DB_KEY, JSON.stringify(init));
+  return init;
+}
+function saveDB(db){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+function resetDemo(){
+  if (!confirm("Reset all demo data back to the seed rows?")) return;
+  localStorage.removeItem(DB_KEY);
+  DB = loadDB();
+  render();
+}
+let DB = loadDB();
+
+function seedSampleFlow(){
+  // Quick admin helper to populate variety for screenshots
+  DB = loadDB();
+  // Ensure HOSP_99 is fully inducted but not matched
+  const u99 = DB.users.find(u=>u.id==="HOSP_99");
+  if (u99 && !u99.personaNotes) u99.personaNotes = "Worn down by financial pressure and isolation; wants non-judgemental peer support.";
+  saveDB(DB);
+  render();
+}
+
+function exportState(){
+  const blob = new Blob([JSON.stringify(DB, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "ngm_state.json"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =====================================================================
+   2. STAGE LOGIC
+   ===================================================================== */
+function userStage(u){
+  if (u.status === "Completed") return "completed";
+  if (u.firstCall && !u.secondCallVol) return "postcall";
+  if (u.firstCall && u.secondCallVol) return "postcall_done";
+  if (u.assignedVol) return "matched";
+  if (u.personaNotes) return "inducted";
+  return "pending";
+}
+const STAGE_LABEL = {
+  pending:       { text:"Awaiting Induction",     cls:"bg-amber-100 text-amber-800" },
+  inducted:      { text:"Awaiting Match",         cls:"bg-blue-100 text-blue-800" },
+  matched:       { text:"First Call Booked",      cls:"bg-indigo-100 text-indigo-800" },
+  postcall:      { text:"Awaiting Second-Call Decision", cls:"bg-purple-100 text-purple-800" },
+  postcall_done: { text:"Second Call Planned",    cls:"bg-purple-100 text-purple-800" },
+  completed:     { text:"Completed",              cls:"bg-emerald-100 text-emerald-800" },
+};
+const RISK_CLS = { High:"bg-red-100 text-red-700", Medium:"bg-amber-100 text-amber-700", Low:"bg-green-100 text-green-700" };
+
+const KANBAN_COLUMNS = [
+  { key:"pending",  title:"Awaiting Induction",   accent:"border-t-amber-500" },
+  { key:"inducted", title:"Awaiting Match",       accent:"border-t-blue-500" },
+  { key:"matched",  title:"First Call Booked",    accent:"border-t-indigo-500" },
+  { key:"postcall", title:"Second-Call Decision", accent:"border-t-purple-500" },
+  { key:"completed",title:"Completed",            accent:"border-t-emerald-500" },
+];
+
+/* =====================================================================
+   3. RENDER
+   ===================================================================== */
+let VIEW_MODE = localStorage.getItem("ngm_viewmode") || "kanban";
+function setViewMode(mode){
+  VIEW_MODE = mode;
+  localStorage.setItem("ngm_viewmode", mode);
+  document.getElementById("viewModeKanban").className = "px-3 py-1.5 text-sm font-medium " + (mode==="kanban"?"bg-slate-900 text-white":"bg-white text-slate-700");
+  document.getElementById("viewModeTable").className = "px-3 py-1.5 text-sm font-medium " + (mode==="table"?"bg-slate-900 text-white":"bg-white text-slate-700");
+  document.getElementById("kanbanWrap").classList.toggle("hidden", mode !== "kanban");
+  document.getElementById("tableWrap").classList.toggle("hidden", mode !== "table");
+}
+
+function render(){
+  DB = loadDB();
+  if (getRole() === "volunteer"){ renderVolunteer(); return; }
+  if (!isStaff()) return;
+
+  // Counts
+  const counts = { pending:0, inducted:0, matched:0, postcall:0, completed:0 };
+  for (const u of DB.users){
+    const s = userStage(u);
+    if (s === "postcall_done") counts.postcall++;
+    else if (counts[s] !== undefined) counts[s]++;
+  }
+  document.getElementById("cnt-pending").textContent = counts.pending;
+  document.getElementById("cnt-inducted").textContent = counts.inducted;
+  document.getElementById("cnt-matched").textContent = counts.matched;
+  document.getElementById("cnt-postcall").textContent = counts.postcall;
+  document.getElementById("cnt-done").textContent = counts.completed;
+
+  // Kanban
+  const board = document.getElementById("kanbanBoard");
+  board.innerHTML = "";
+  for (const col of KANBAN_COLUMNS){
+    const cards = DB.users.filter(u => {
+      const s = userStage(u);
+      return col.key === "postcall" ? (s==="postcall"||s==="postcall_done") : s === col.key;
+    });
+    const colEl = document.createElement("div");
+    colEl.className = `kanban-col flex-1 bg-slate-100 rounded-lg border-t-4 ${col.accent} p-3`;
+    colEl.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold text-slate-800 text-sm">${col.title}</div>
+        <div class="text-xs text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">${cards.length}</div>
+      </div>
+      <div class="space-y-2" id="kanCol-${col.key}"></div>
+    `;
+    board.appendChild(colEl);
+    const slot = colEl.querySelector(`#kanCol-${col.key}`);
+    if (!cards.length){
+      slot.innerHTML = `<div class="text-xs text-slate-400 italic px-2 py-3 text-center">— empty —</div>`;
+    } else {
+      for (const u of cards) slot.appendChild(kanbanCard(u));
+    }
+  }
+
+  // Table
+  const tbody = document.getElementById("usersTable");
+  tbody.innerHTML = "";
+  for (const u of DB.users){
+    const stage = userStage(u);
+    const tr = document.createElement("tr");
+    tr.className = "border-t border-slate-100 hover:bg-slate-50";
+    tr.innerHTML = `
+      <td class="px-4 py-2 font-mono text-xs">${u.id}</td>
+      <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs font-medium ${RISK_CLS[u.riskLevel]||""}">${u.riskLevel||"—"}</span></td>
+      <td class="px-4 py-2 text-slate-700">${u.language||"—"}</td>
+      <td class="px-4 py-2 text-slate-700">${u.contactMethod||"—"}</td>
+      <td class="px-4 py-2 text-slate-700 max-w-[18ch] truncate" title="${escapeHtml(u.personaNotes||"")}">${u.personaNotes||'<span class="text-slate-400 italic">pending</span>'}</td>
+      <td class="px-4 py-2 font-mono text-xs">${u.assignedVol||'<span class="text-slate-400">—</span>'}</td>
+      <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs font-medium ${STAGE_LABEL[stage].cls}">${STAGE_LABEL[stage].text}</span></td>
+      <td class="px-4 py-2 text-right"><button onclick="openUser('${u.id}')" class="text-xs px-2.5 py-1 rounded font-medium" style="background: var(--brand-teal); color: white;">Open →</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Volunteer registry
+  renderVolTable();
+}
+
+function kanbanCard(u){
+  const card = document.createElement("button");
+  card.onclick = () => openUser(u.id);
+  card.className = "w-full bg-white rounded-md border border-slate-200 hover:border-[#1F4F5C]/40 hover:shadow text-left p-3 transition";
+  const vol = u.assignedVol ? DB.volunteers.find(v=>v.id===u.assignedVol) : null;
+  const mood = u.form?.mood;
+  const moodCfg = mood ? MOOD_BADGE[mood] : null;
+  const sentScore = u.sentiment?.score;
+  const sentCls = sentScore == null ? "" :
+    sentScore < -0.5 ? "text-red-700 bg-red-50 border-red-200" :
+    sentScore < -0.2 ? "text-amber-700 bg-amber-50 border-amber-200" :
+    sentScore < 0.1  ? "text-slate-700 bg-slate-50 border-slate-200" :
+                       "text-emerald-700 bg-emerald-50 border-emerald-200";
+  const summary = formSummary(u.form) || u.personaNotes;
+  card.innerHTML = `
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="font-mono text-xs text-slate-700">${u.id}</span>
+      <span class="px-1.5 py-0.5 rounded text-[10px] font-medium ${RISK_CLS[u.riskLevel]||""}">${u.riskLevel||"—"}</span>
+    </div>
+    <div class="text-xs text-slate-500 mb-1.5">${u.language||""} · ${u.contactMethod||""}</div>
+    ${moodCfg || sentScore != null ? `
+      <div class="flex items-center gap-1.5 mb-1.5">
+        ${moodCfg ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium ${moodCfg.cls}">${moodCfg.icon} ${mood}</span>` : ""}
+        ${sentScore != null ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border ${sentCls}">${sentScore >= 0 ? "+" : ""}${sentScore.toFixed(2)}</span>` : ""}
+      </div>` : ""}
+    ${summary ? `<div class="text-xs text-slate-700 line-clamp-2 mb-1.5">${escapeHtml(summary)}</div>` : `<div class="text-xs italic text-slate-400 mb-1.5">No form yet</div>`}
+    ${vol ? `<div class="text-[11px] text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5 inline-block">→ ${vol.name} (${vol.id})</div>` : ""}
+  `;
+  return card;
+}
+
+function renderVolTable(){
+  const vt = document.getElementById("volTable");
+  vt.innerHTML = "";
+  for (const v of DB.volunteers){
+    const tr = document.createElement("tr");
+    tr.className = "border-t border-slate-100";
+    const statusCls = v.status === "Available" ? "bg-emerald-100 text-emerald-700" : v.status === "Busy" ? "bg-slate-200 text-slate-600" : "bg-red-100 text-red-700";
+    const editable = isAdmin();
+    tr.innerHTML = `
+      <td class="px-3 py-2 font-mono text-xs">${v.id}</td>
+      <td class="px-3 py-2">${v.name}</td>
+      <td class="px-3 py-2">${v.accredLabel}</td>
+      <td class="px-3 py-2 text-slate-600">${v.specialties}</td>
+      <td class="px-3 py-2 text-slate-600">${v.language}</td>
+      <td class="px-3 py-2">${editable
+        ? `<input type="number" min="0" max="9" value="${v.currentLoad}" onchange="updateVolLoad('${v.id}', this.value)" class="w-14 border border-slate-300 rounded px-1 py-0.5 text-xs" />`
+        : v.currentLoad}</td>
+      <td class="px-3 py-2">${editable
+        ? `<select onchange="updateVolStatus('${v.id}', this.value)" class="border border-slate-300 rounded px-1 py-0.5 text-xs">
+             ${["Available","Busy","Offline"].map(s=>`<option ${s===v.status?"selected":""}>${s}</option>`).join("")}
+           </select>`
+        : `<span class="px-2 py-0.5 rounded text-xs font-medium ${statusCls}">${v.status}</span>`}</td>
+      <td class="px-3 py-2 text-slate-600">${v.persona}</td>
+      <td class="px-3 py-2 text-right">${editable ? `<button onclick="impersonateVolunteer('${v.id}')" class="text-[11px] text-slate-500 hover:text-slate-900 underline">view as</button>` : ""}</td>
+    `;
+    vt.appendChild(tr);
+  }
+}
+
+function updateVolLoad(id, val){
+  const v = DB.volunteers.find(x=>x.id===id);
+  if (!v) return;
+  v.currentLoad = parseInt(val) || 0;
+  if (v.currentLoad >= 4 && v.status === "Available") v.status = "Busy";
+  if (v.currentLoad < 4 && v.status === "Busy") v.status = "Available";
+  saveDB(DB);
+  render();
+}
+function updateVolStatus(id, val){
+  const v = DB.volunteers.find(x=>x.id===id);
+  if (!v) return;
+  v.status = val;
+  saveDB(DB);
+  render();
+}
+function impersonateVolunteer(id){
+  // Admin shortcut — switch to volunteer view as a specific volunteer
+  localStorage.setItem("ngm_volunteer_as", id);
+  setRole("volunteer");
+  applyRole();
+}
+
+/* =====================================================================
+   4. VOLUNTEER VIEW
+   ===================================================================== */
+function renderVolunteer(){
+  DB = loadDB();
+  const volId = localStorage.getItem("ngm_volunteer_as") || "VOL_001";
+  const me = DB.volunteers.find(v => v.id === volId) || DB.volunteers[0];
+  document.getElementById("volStats").textContent = `Accreditation ${me.accred} · ${me.language} · Load: ${me.currentLoad}`;
+
+  // Find users assigned to me where firstCall hasn't happened yet
+  const nextUsers = DB.users.filter(u => u.assignedVol === me.id && !u.firstCall);
+  const nextEl = document.getElementById("volNextCard");
+  if (!nextUsers.length){
+    nextEl.innerHTML = `
+      <div class="bg-white border border-slate-200 rounded-lg p-6 text-center text-slate-500">
+        No assignments waiting. Coordinator will ping you when a new user is ready.
+      </div>`;
+  } else {
+    const u = nextUsers[0];
+    nextEl.innerHTML = `
+      <div class="bg-white border-2 border-emerald-200 rounded-lg p-5 shadow-sm">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-emerald-700 font-semibold">First call · scheduled</div>
+            <div class="font-bold text-slate-900 text-lg mt-1">${u.id} <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium ${RISK_CLS[u.riskLevel]||""}">${u.riskLevel}</span></div>
+          </div>
+          <div class="text-right text-xs text-slate-500">${u.contactMethod}<br>${u.language}</div>
+        </div>
+        <div class="bg-slate-50 rounded p-3 mb-3">
+          <div class="text-xs uppercase text-slate-500 font-semibold mb-1">Persona (from AI induction)</div>
+          <div class="text-sm text-slate-800">${escapeHtml(u.personaNotes||"—")}</div>
+        </div>
+        ${u.presenting ? `<div class="text-xs text-slate-600 mb-3"><span class="text-slate-500">Clinical context:</span> ${escapeHtml(u.presenting)}</div>` : ""}
+        <div class="flex flex-wrap gap-2">
+          <button onclick="alert('In production this would mark the call as accepted and notify the coordinator.')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-medium text-sm">Accept Call</button>
+          <button onclick="alert('In production this would open a reschedule flow.')" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded font-medium text-sm">Reschedule</button>
+          <button onclick="alert('In production this would notify the coordinator and re-queue the user.')" class="bg-white border border-red-300 text-red-700 hover:bg-red-50 px-4 py-2 rounded font-medium text-sm">Can't take it</button>
+        </div>
+      </div>`;
+  }
+
+  // History
+  const history = DB.users.filter(u => (u.assignedVol === me.id || u.secondCallVol === me.id) && u.firstCall);
+  const hist = document.getElementById("volHistoryList");
+  if (!history.length){
+    hist.innerHTML = `<div class="text-sm text-slate-400 italic">No call history yet.</div>`;
+  } else {
+    hist.innerHTML = "";
+    for (const u of history){
+      const fc = u.firstCall;
+      const div = document.createElement("div");
+      div.className = "bg-white border border-slate-200 rounded p-3 text-sm";
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="font-mono text-xs">${u.id}</div>
+          <div class="text-xs text-slate-500">${fc.loggedAt||""}</div>
+        </div>
+        <div class="text-xs text-slate-600 mt-1">Engagement: <strong>${fc.engagement}</strong> · Themes: ${fc.themes||"—"}</div>
+      `;
+      hist.appendChild(div);
+    }
+  }
+}
+
+
+/* =====================================================================
+   5. MODALS — INTAKE / USER DETAIL / FIRST-CALL FORM / SETTINGS
+   ===================================================================== */
+function closeModal(){ document.getElementById("modalRoot").innerHTML = ""; }
+function showModal(html, size){
+  const sizeCls = size === "5xl" ? "max-w-5xl" : size === "4xl" ? "max-w-4xl" : "max-w-3xl";
+  document.getElementById("modalRoot").innerHTML = `
+    <div class="fixed inset-0 z-40 bg-slate-900/50 grid place-items-center p-4 overflow-y-auto" onclick="if(event.target===this)closeModal()">
+      <div class="bg-white rounded-xl shadow-2xl ${sizeCls} w-full my-8 overflow-hidden">${html}</div>
+    </div>`;
+}
+
+/* ----- form + sentiment helpers (shared by chat modal, detail panel, kanban) ----- */
+const MOOD_BADGE = {
+  low:        { cls:"bg-red-100 text-red-700", icon:"▼" },
+  withdrawn:  { cls:"bg-red-100 text-red-700", icon:"▼" },
+  guarded:    { cls:"bg-amber-100 text-amber-700", icon:"◐" },
+  mixed:      { cls:"bg-slate-100 text-slate-700", icon:"◐" },
+  okay:       { cls:"bg-blue-100 text-blue-700", icon:"●" },
+  hopeful:    { cls:"bg-emerald-100 text-emerald-700", icon:"▲" },
+};
+
+function formSummary(form){
+  if (!form) return "";
+  const bits = [];
+  if (form.mood) bits.push(form.mood);
+  if (form.primaryStressors?.length) bits.push(form.primaryStressors.join("+"));
+  if (form.copingActivities) bits.push(form.copingActivities.split(/[.;]/)[0].trim().slice(0,40));
+  return bits.join(" · ");
+}
+
+function renderFormPanel(form){
+  if (!form){
+    return `<div class="text-xs text-slate-400 italic p-4 text-center border border-dashed border-slate-300 rounded">Form will populate when the agent finishes the conversation.</div>`;
+  }
+  const moodCfg = MOOD_BADGE[form.mood] || { cls:"bg-slate-100 text-slate-600", icon:"·" };
+  const rows = [
+    ["Mood",          form.mood ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${moodCfg.cls}">${moodCfg.icon} ${form.mood}</span>` : "—"],
+    ["Stressors",     (form.primaryStressors||[]).map(s=>`<span class="px-1.5 py-0.5 rounded text-xs bg-red-50 text-red-700 mr-1 border border-red-200">${escapeHtml(s)}</span>`).join("") || "—"],
+    ["Sleep",         escapeHtml(form.sleep||"—")],
+    ["Social support",escapeHtml(form.socialSupport||"—")],
+    ["Recent events", escapeHtml(form.recentLifeEvents||"—")],
+    ["Coping / games",escapeHtml(form.copingActivities||"—")],
+    ["Wants style",   escapeHtml(form.preferredVolunteerStyle||"—")],
+    ["Best time",     escapeHtml(form.preferredContactWindow||"—")],
+    ["Languages",     (form.languages||[]).join(", ") || "—"],
+    ["Notes",         escapeHtml(form.notes||"—")],
+  ];
+  return `<div class="space-y-2 text-sm">${rows.map(([k,v]) => `
+    <div class="bg-white rounded border border-slate-200 px-3 py-2">
+      <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">${k}</div>
+      <div class="text-slate-800 mt-0.5">${v}</div>
+    </div>`).join("")}</div>`;
+}
+
+function renderSentimentCard(s){
+  if (!s) return "";
+  const cls = s.score < -0.5 ? "border-red-200 bg-red-50"
+            : s.score < -0.2 ? "border-amber-200 bg-amber-50"
+            : s.score < 0.1  ? "border-slate-200 bg-slate-50"
+                              : "border-emerald-200 bg-emerald-50";
+  const numCls = s.score < -0.5 ? "text-red-700"
+              : s.score < -0.2 ? "text-amber-700"
+              : s.score < 0.1  ? "text-slate-700"
+                                : "text-emerald-700";
+  return `
+    <div class="rounded-lg border ${cls} p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs uppercase tracking-wide text-slate-700 font-semibold">Sentiment Analysis</div>
+        <div class="text-3xl font-bold ${numCls}">${s.score >= 0 ? "+" : ""}${s.score.toFixed(2)}</div>
+      </div>
+      <div class="font-semibold text-slate-900 mb-2">${escapeHtml(s.tone||"")}</div>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        ${(s.primaryEmotions||[]).map(e => `<span class="px-2 py-0.5 rounded text-xs font-medium bg-white border border-slate-300 text-slate-700">${escapeHtml(e)}</span>`).join("")}
+      </div>
+      ${(s.activitySignals||[]).length ? `
+        <div class="mt-3">
+          <div class="text-[10px] uppercase tracking-wide font-semibold text-slate-600 mb-1">Activity signals</div>
+          <ul class="text-xs text-slate-700 list-disc pl-4 space-y-0.5">
+            ${(s.activitySignals||[]).map(i => `<li>${escapeHtml(i)}</li>`).join("")}
+          </ul>
+        </div>` : ""}
+      ${s.recommendedApproach ? `<div class="mt-3 text-xs text-slate-700 italic border-t border-slate-200 pt-2">↳ ${escapeHtml(s.recommendedApproach)}</div>` : ""}
+    </div>`;
+}
+
+function analyzeSentiment(form){
+  if (!form) return null;
+  let score = 0;
+  const emotions = new Set();
+  const signals = [];
+
+  const moodScores = { low:-0.7, withdrawn:-0.7, guarded:-0.3, mixed:-0.1, okay:0.2, hopeful:0.5 };
+  if (form.mood && moodScores[form.mood] !== undefined) score += moodScores[form.mood];
+  if (["low","withdrawn"].includes(form.mood)) emotions.add("low affect");
+  if (form.mood === "guarded") emotions.add("anxiety");
+  if (form.mood === "hopeful") emotions.add("hopefulness");
+
+  const emap = { financial:"financial strain", isolation:"loneliness", family:"family rupture", grief:"grief", health:"health concern", work:"work strain", housing:"housing instability", substance:"substance struggle" };
+  for (const s of (form.primaryStressors||[])){
+    score -= 0.12;
+    if (emap[s]) emotions.add(emap[s]);
+  }
+
+  const sleepScores = { "very poor":-0.25, "poor":-0.12, "okay":0, "good":0.1 };
+  if (form.sleep && sleepScores[form.sleep] !== undefined) score += sleepScores[form.sleep];
+  if (["very poor","poor"].includes(form.sleep)) emotions.add("fatigue");
+
+  const supScores = { isolated:-0.25, limited:-0.1, moderate:0.05, strong:0.2 };
+  if (form.socialSupport && supScores[form.socialSupport] !== undefined) score += supScores[form.socialSupport];
+
+  const activities = (form.copingActivities||"").toLowerCase();
+  const lookup = [
+    [/stardew\s*valley/, "Stardew Valley — typically a comfort/calm-seeking pattern; user seeks control and gentle routine"],
+    [/animal\s*crossing/, "Animal Crossing — strong cozy-escapism signal; low-pressure social connection"],
+    [/minecraft/, "Minecraft — creative escape; seeking agency and control in a structured world"],
+    [/elden\s*ring|dark\s*souls|sekiro/, "Souls-like games — challenge-seeking; user may be self-validating through difficulty"],
+    [/factorio|cities\s*skylines|\bsim\b/, "Sim/strategy games — structure-seeking; finds order in systems when life feels chaotic"],
+    [/fortnite|apex|valorant|counter.?strike/, "Competitive shooter — social online play; community-as-coping signal"],
+    [/wow|warcraft|ffxiv|final\s*fantasy/, "MMO — long-form social escape; seeking community and belonging"],
+    [/doom|gta|action/, "High-arousal action games — possible frustration release"],
+    [/cozy|farming\s*game/, "Cozy/farming games — comfort and gentle predictability"],
+  ];
+  for (const [re, msg] of lookup){
+    if (re.test(activities)) signals.push(msg);
+  }
+  if (/\bwalk|run|exercise|gym|hike/.test(activities)){
+    signals.push("Active coping via movement — positive self-regulation signal");
+    score += 0.08;
+  }
+  if (/music|listen|playlist|spotify/.test(activities)){
+    signals.push("Music as coping — common adaptive signal");
+  }
+  if (/watch|netflix|youtube|\btv\b|shows|movies/.test(activities)){
+    signals.push("Passive media — may be coping or avoidance; volunteer should explore gently");
+  }
+  if (/friends|family|partner/.test(((form.recentLifeEvents||"") + " " + activities).toLowerCase())){
+    signals.push("Social references in conversation — relationships are top-of-mind");
+  }
+
+  score = Math.max(-1, Math.min(1, Math.round(score * 100)/100));
+
+  let tone;
+  if (score < -0.5) tone = "Significant distress — multiple stressors compounding";
+  else if (score < -0.2) tone = "Mild-to-moderate distress — engaged but burdened";
+  else if (score < 0.1)  tone = "Mixed signals — fatigue with some adaptive coping";
+  else if (score < 0.3)  tone = "Coping with effort — willing to engage";
+  else tone = "Generally positive — open to support";
+
+  let recommended;
+  if (score < -0.5) recommended = "Match urgently with a high-empathy Crisis-tier volunteer, even if stated risk is Medium";
+  else if (form.socialSupport === "isolated") recommended = "Expect rapport-building to take 2–3 calls; volunteer should not push for openness early";
+  else if (signals.some(s=>/games|game|MMO|shooter|Souls|cozy/.test(s))) recommended = "Volunteer can use the user's gaming interest as a natural conversational on-ramp";
+  else recommended = "Standard match — follow Agent 2's recommendation";
+
+  return { score, tone, primaryEmotions: [...emotions], activitySignals: signals, recommendedApproach: recommended };
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function openIntake(){
+  const nextId = `HOSP_${DB.nextId}`;
+  showModal(`
+    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">Hospital Staff Intake</div>
+        <div class="font-semibold text-slate-900">New Referral — ${nextId} will be assigned on submit</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <form id="intakeForm" class="px-6 py-5 space-y-4" onsubmit="submitIntake(event)">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="text-sm font-medium text-slate-700">Risk Level *</span>
+          <select name="riskLevel" required class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2">
+            <option value="">Select…</option><option>Low</option><option>Medium</option><option selected>High</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-slate-700">Preferred Language(s) *</span>
+          <input name="language" required value="English" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-slate-700">Preferred Contact Method *</span>
+          <select name="contactMethod" required class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2">
+            <option>Phone (Evening)</option><option>Phone (Daytime)</option><option>SMS (Daytime)</option><option>SMS (Evening)</option><option>Email</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-slate-700">Age Bracket</span>
+          <select name="ageBracket" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2">
+            <option value="">Prefer not to say</option><option>16–24</option><option>25–34</option><option>35–49</option><option>50–64</option><option>65+</option>
+          </select>
+        </label>
+      </div>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Presenting Concern (clinical, brief) *</span>
+        <textarea name="presenting" required rows="2" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2"></textarea>
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Known Stressors / Context</span>
+        <textarea name="stressors" rows="2" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2"></textarea>
+      </label>
+      <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+        De-identified entry. No full names, no DOBs, no addresses. Agent 1 will gather personal context directly from the user.
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-slate-300 text-slate-700">Cancel</button>
+        <button type="submit" class="btn-brand px-4 py-2 rounded-md font-medium">Create Referral & Trigger Agent 1</button>
+      </div>
+    </form>
+  `);
+}
+
+function submitIntake(e){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const id = `HOSP_${DB.nextId}`;
+  const user = {
+    id, status:"Pending",
+    riskLevel: f.get("riskLevel"),
+    language: f.get("language").trim(),
+    contactMethod: f.get("contactMethod"),
+    ageBracket: f.get("ageBracket") || "",
+    presenting: f.get("presenting").trim(),
+    stressors: f.get("stressors").trim(),
+    personaNotes:"", assignedVol:"", firstCall:null, secondCallVol:"",
+    createdAt: new Date().toISOString().slice(0,16).replace("T"," "),
+  };
+  DB.users.unshift(user);
+  DB.nextId++;
+  saveDB(DB);
+  closeModal();
+  render();
+  setTimeout(() => openUser(id), 150);
+}
+
+function openUser(userId){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  const stage = userStage(u);
+  showModal(renderUserPanel(u, stage));
+}
+
+function renderUserPanel(u, stage){
+  const riskBadge = `<span class="px-2 py-0.5 rounded text-xs font-medium ${RISK_CLS[u.riskLevel]||""}">${u.riskLevel}</span>`;
+  const stageBadge = `<span class="px-2 py-0.5 rounded text-xs font-medium ${STAGE_LABEL[stage].cls}">${STAGE_LABEL[stage].text}</span>`;
+  const assigned = u.assignedVol ? DB.volunteers.find(v=>v.id===u.assignedVol) : null;
+  const second   = u.secondCallVol ? DB.volunteers.find(v=>v.id===u.secondCallVol) : null;
+
+  return `
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-start justify-between">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">User Record</div>
+        <div class="font-semibold text-slate-900 text-lg">${u.id} · ${riskBadge} · ${stageBadge}</div>
+        <div class="text-xs text-slate-500 mt-1">Created ${u.createdAt} · ${u.language} · ${u.contactMethod}</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <div class="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+      <details open class="bg-slate-50 rounded-md border border-slate-200 p-3">
+        <summary class="text-sm font-semibold text-slate-800">Hospital Intake Snapshot</summary>
+        <div class="mt-2 text-sm text-slate-700 space-y-1">
+          <div><span class="text-slate-500">Presenting:</span> ${escapeHtml(u.presenting) || "—"}</div>
+          <div><span class="text-slate-500">Stressors:</span> ${escapeHtml(u.stressors) || "—"}</div>
+          ${u.ageBracket ? `<div><span class="text-slate-500">Age:</span> ${u.ageBracket}</div>` : ""}
+        </div>
+      </details>
+
+      <!-- AGENT 1: INDUCTION + FORM -->
+      <div class="rounded-lg border ${u.form ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#1F4F5C]/20 bg-[#1F4F5C]/[0.04]'} p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wide font-semibold" style="color: var(--brand-teal);">Agent 1 · Induction Liaison</div>
+            <div class="text-sm text-slate-700">Has a warm chat with the user and fills the intake form below.</div>
+          </div>
+          ${u.form
+            ? `<span class="text-emerald-700 text-xs font-medium">✓ Form captured</span>`
+            : `<button onclick="runAgent1('${u.id}')" class="btn-brand px-3 py-1.5 rounded-md text-sm font-medium">Run Induction</button>`}
+        </div>
+        <div id="agent1-stream" class="mt-3"></div>
+        ${u.form ? `
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs uppercase text-emerald-700 font-semibold mb-2">Intake Form</div>
+              ${renderFormPanel(u.form)}
+            </div>
+            <div>
+              <div class="text-xs uppercase text-emerald-700 font-semibold mb-2">Sentiment Pass</div>
+              ${renderSentimentCard(u.sentiment)}
+            </div>
+          </div>` : ""}
+      </div>
+
+      <!-- AGENT 2: MATCHMAKER -->
+      <div class="rounded-lg border ${assigned ? 'border-emerald-200 bg-emerald-50/40' : (u.form ? 'border-[#1F4F5C]/20 bg-[#1F4F5C]/[0.04]' : 'border-slate-200 bg-slate-50/40')} p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wide font-semibold" style="color: var(--brand-teal);">Agent 2 · Matchmaker (Least Load)</div>
+            <div class="text-sm text-slate-700">Filters by risk → accreditation + language, then picks the lowest-load eligible volunteer.</div>
+          </div>
+          ${assigned
+            ? `<div class="flex items-center gap-2">
+                 <span class="text-emerald-700 text-xs font-medium">✓ ${assigned.id} assigned</span>
+                 ${isAdmin() ? `<button onclick="openOverride('${u.id}')" class="text-xs px-2 py-1 rounded border border-purple-300 text-purple-700 hover:bg-purple-50">Override</button>` : ""}
+               </div>`
+            : (u.form
+                ? `<button onclick="runAgent2('${u.id}')" class="btn-brand px-3 py-1.5 rounded-md text-sm font-medium">Find First-Call Volunteer</button>`
+                : `<span class="text-xs text-slate-500 italic">Waiting on Agent 1</span>`)}
+        </div>
+        <div id="agent2-stream" class="mt-3"></div>
+        ${assigned ? volunteerCard(assigned, "First-call volunteer") : ""}
+        ${assigned && u.matchReason ? `<div class="mt-2 p-2 rounded bg-white border border-emerald-200 text-xs text-slate-700"><span class="font-semibold text-emerald-700">Match reason:</span> ${escapeHtml(u.matchReason)}</div>` : ""}
+      </div>
+
+      ${assigned ? renderFirstCallSection(u) : ""}
+      ${u.firstCall ? renderSecondCallSection(u, second) : ""}
+
+      <div class="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+        <span>Mode: <span id="modeHintModal">${getSettings().useLive ? "Live Foundry agents" : "Mock JS agents"}</span></span>
+        ${isAdmin() ? `<button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-700 underline">Admin: delete this record</button>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function deleteUser(userId){
+  if (!confirm("Permanently delete this referral?")) return;
+  DB.users = DB.users.filter(u => u.id !== userId);
+  saveDB(DB);
+  closeModal();
+  render();
+}
+
+function volunteerCard(v, label){
+  return `
+    <div class="mt-3 p-3 rounded-md bg-white border border-emerald-200 flex items-start gap-3">
+      <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-bold grid place-items-center">${v.name[0]}</div>
+      <div class="flex-1 text-sm">
+        <div class="text-xs uppercase tracking-wide text-emerald-700 font-semibold">${label}</div>
+        <div class="font-semibold text-slate-900">${v.name} · <span class="font-mono text-xs">${v.id}</span></div>
+        <div class="text-slate-600">${v.accredLabel} · ${v.language} · Load ${v.currentLoad}</div>
+        <div class="text-slate-600 italic">Specialties: ${v.specialties}</div>
+        <div class="text-slate-600">Persona: ${v.persona}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFirstCallSection(u){
+  if (u.firstCall){
+    const fc = u.firstCall;
+    return `
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+        <div class="text-xs uppercase tracking-wide text-emerald-700 font-semibold">First Call · Outcome Logged</div>
+        <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-slate-500">Engagement:</span> <strong>${fc.engagement}</strong></div>
+          <div><span class="text-slate-500">Escalation needed:</span> <strong>${fc.escalation ? "Yes" : "No"}</strong></div>
+          <div class="col-span-2"><span class="text-slate-500">Themes:</span> ${escapeHtml(fc.themes) || "—"}</div>
+          <div class="col-span-2"><span class="text-slate-500">Volunteer notes:</span> <em>${escapeHtml(fc.notes) || "—"}</em></div>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="rounded-lg border border-amber-200 bg-amber-50/40 p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-amber-700 font-semibold">First Call · Awaiting Outcome</div>
+          <div class="text-sm text-slate-700">After the volunteer completes the first call, log the outcome so the bot can plan the second call.</div>
+        </div>
+        <button onclick="openFirstCallForm('${u.id}')" class="px-3 py-1.5 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700">Log First-Call Outcome</button>
+      </div>
+    </div>`;
+}
+
+function renderSecondCallSection(u, second){
+  if (second){
+    return `
+      <div class="rounded-lg border border-purple-200 bg-purple-50/40 p-4">
+        <div class="text-xs uppercase tracking-wide text-purple-700 font-semibold">Bot Decision · Second Call Planned</div>
+        ${volunteerCard(second, "Second-call volunteer")}
+        <div class="mt-3 p-3 bg-white border border-purple-200 rounded text-sm">
+          <span class="text-xs uppercase text-purple-700 font-semibold">Reasoning</span>
+          <div class="text-slate-700 mt-1">${escapeHtml(u.secondCallReason) || "—"}</div>
+        </div>
+        <div class="mt-3 text-right">
+          <button onclick="markCompleted('${u.id}')" class="text-xs px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-700">Mark Referral Complete</button>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="rounded-lg border border-purple-200 bg-purple-50/40 p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-purple-700 font-semibold">Second-Call Decision Bot</div>
+          <div class="text-sm text-slate-700">Reads the first-call outcome and decides who should make the second call.</div>
+        </div>
+        <button onclick="runSecondCallBot('${u.id}')" class="px-3 py-1.5 rounded-md bg-purple-600 text-white text-sm font-medium hover:bg-purple-700">Run Decision Bot</button>
+      </div>
+      <div id="bot-stream" class="mt-3"></div>
+    </div>`;
+}
+
+/* =====================================================================
+   6. AGENT 1 (mock) and AGENT 1 (live)
+   ===================================================================== */
+async function runAgent1(userId){
+  const settings = getSettings();
+  if (settings.useLive) return runAgent1Live(userId);
+  return runAgent1Mock(userId);
+}
+
+async function runAgent1Mock(userId){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  const target = document.getElementById("agent1-stream");
+  target.innerHTML = `
+    <div class="p-3 rounded text-sm" style="background:#FFFFFF; border:1px solid var(--brand-teal-ghost);">
+      <div class="flex items-center gap-2 text-[#1F4F5C] font-medium text-xs uppercase">
+        <span class="w-2 h-2 rounded-full pulse-ring" style="background: var(--brand-teal);"></span> Mock Agent 1 simulating induction<span class="dot-typing"></span>
+      </div>
+      <pre class="agent-stream text-slate-700 mt-2" id="a1-log"></pre>
+    </div>`;
+  const log = document.getElementById("a1-log");
+  const script = [
+    `Hi, this is the support team following up after your hospital visit. How has your day been?`,
+    `[user] Tired. Slept rough last night. Maybe 3 hours.`,
+    `That sounds heavy. What's weighing on you most right now?`,
+    `[user] Honestly money. Lost shifts at work, behind on rent.`,
+    `Thank you for trusting me with that. How are you getting through the evenings?`,
+    `[user] I play Stardew Valley a lot. It's calming. Sometimes I go for walks at night.`,
+    `That makes sense. Would speaking with someone calm and reflective feel right?`,
+    `[user] Yeah, someone who won't just talk at me.`,
+  ];
+  for (const line of script){ await sleep(350); log.textContent += line + "\n"; }
+  await sleep(300);
+  // Build a mock form that mirrors what the real agent would emit
+  const mockForm = inferMockForm(u);
+  applyInductionResult(userId, { userId: u.id, form: mockForm, safetyFlag: false });
+}
+
+function inferMockForm(u){
+  const text = ((u.presenting||"") + " " + (u.stressors||"")).toLowerCase();
+  const stressors = [];
+  if (/money|financial|rent|debt|job|unemploy|shift/.test(text)) stressors.push("financial");
+  if (/alone|isolat|lonely|silence/.test(text) || u.stressors === "") stressors.push("isolation");
+  if (/work|burnout|shift/.test(text)) stressors.push("work");
+  if (/family|partner|relationship|estrang/.test(text)) stressors.push("family");
+  if (/grief|loss|died|passed/.test(text)) stressors.push("grief");
+  if (!stressors.length) stressors.push("other");
+  return {
+    mood: u.riskLevel === "High" ? "guarded" : u.riskLevel === "Medium" ? "mixed" : "okay",
+    primaryStressors: stressors,
+    sleep: u.riskLevel === "High" ? "very poor" : "poor",
+    socialSupport: stressors.includes("isolation") ? "isolated" : "limited",
+    recentLifeEvents: u.stressors || "—",
+    copingActivities: "Plays Stardew Valley most evenings; walks at night when can't sleep",
+    preferredVolunteerStyle: "calm/reflective",
+    preferredContactWindow: (u.contactMethod||"").toLowerCase().includes("evening") ? "evening" : "anytime",
+    languages: (u.language||"English").split(/,\s*/),
+    notes: "Wants someone with lived experience, not a script.",
+  };
+}
+
+async function runAgent1Live(userId){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  openInductionChat(u);
+}
+
+function inducePersona(u){
+  const text = (u.presenting + " " + u.stressors + " " + u.language).toLowerCase();
+  const tags = [];
+  if (/money|financial|rent|debt|job|unemploy/.test(text)) tags.push("financial stress");
+  if (/family|partner|relationship|estrang/.test(text)) tags.push("family/relationship rupture");
+  if (/alone|isolat|lonely|silence/.test(text) || u.stressors === "") tags.push("isolation");
+  if (/work|burnout|shift/.test(text)) tags.push("work strain");
+  if (/self.?harm|suicid|end it/.test(text)) tags.push("safety concern");
+  if (!tags.length) tags.push("general distress");
+  const tone = u.riskLevel === "High" ? "guarded but reaching out"
+            : u.riskLevel === "Medium" ? "worn down, willing to engage"
+            : "low affect, exploring options";
+  return `${tone[0].toUpperCase()+tone.slice(1)}; primary concerns: ${tags.join(", ")}. Wants someone non-judgemental.`;
+}
+
+/* =====================================================================
+   7. LIVE INDUCTION CHAT MODAL (multi-turn)
+   ===================================================================== */
+function openInductionChat(u){
+  showModal(`
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">Live Induction · Agent 1</div>
+        <div class="font-semibold text-slate-900">${u.id} · ${u.riskLevel} risk · ${u.language}</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-5">
+      <div class="lg:col-span-3 px-5 py-4 lg:border-r border-slate-200">
+        <div id="chatLog" class="h-[26rem] overflow-y-auto bg-slate-50 border border-slate-200 rounded p-3 space-y-2 text-sm"></div>
+        <form id="chatForm" class="mt-3 flex gap-2" onsubmit="sendChatTurn(event, '${u.id}')">
+          <input id="chatInput" autocomplete="off" placeholder="Type as the user…" class="flex-1 border border-slate-300 rounded-md px-3 py-2" />
+          <button type="submit" id="chatSendBtn" class="btn-brand px-4 py-2 rounded-md font-medium">Send</button>
+        </form>
+        <div class="text-[11px] text-slate-500 mt-2 flex justify-between">
+          <span id="chatStatus">Calling agent…</span>
+          <span id="chatRespId" class="font-mono"></span>
+        </div>
+      </div>
+      <div class="lg:col-span-2 bg-slate-50 px-5 py-4 max-h-[36rem] overflow-y-auto">
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Intake Form <span class="ml-1 text-slate-400 normal-case">(fills when agent finishes)</span></div>
+        <div id="formPanel"></div>
+      </div>
+    </div>
+  `, "5xl");
+  document.getElementById("formPanel").innerHTML = renderFormPanel(null);
+  startInduction(u);
+}
+
+let CHAT_RESPONSE_ID = null;
+function appendChatBubble(role, text){
+  const log = document.getElementById("chatLog");
+  if (!log) return;
+  const bubble = document.createElement("div");
+  if (role === "agent"){
+    bubble.className = "rounded-lg px-3 py-2 max-w-[85%] text-slate-800";
+    bubble.style.background = "#FFFFFF";
+    bubble.style.border = "1px solid var(--brand-teal-ghost)";
+    bubble.style.boxShadow = "var(--elev-1)";
+  } else {
+    bubble.className = "rounded-lg px-3 py-2 max-w-[85%] ml-auto";
+    bubble.style.background = "var(--brand-teal)";
+    bubble.style.color = "white";
+  }
+  bubble.textContent = text;
+  log.appendChild(bubble);
+  log.scrollTop = log.scrollHeight;
+}
+function setChatStatus(s){ const e=document.getElementById("chatStatus"); if(e) e.textContent = s; }
+
+async function startInduction(u){
+  setChatStatus("Calling Agent 1 (live)…");
+  try {
+    const resp = await fetchProxy("/api/agent1/start", {
+      userId: u.id,
+      intake: {
+        riskLevel: u.riskLevel, language: u.language, contactMethod: u.contactMethod,
+        presenting: u.presenting, stressors: u.stressors,
+      }
+    });
+    CHAT_RESPONSE_ID = resp.responseId;
+    document.getElementById("chatRespId").textContent = (resp.responseId||"").slice(0,18);
+    if (resp.reply) appendChatBubble("agent", stripJsonBlock(resp.reply));
+    setChatStatus(resp.done ? "Induction complete — saving persona…" : "Ready. Type as the user, then send.");
+    if (resp.done && resp.json){ applyInductionResult(u.id, resp.json); }
+  } catch(e){
+    setChatStatus("Error: " + e.message + " — falling back to mock.");
+    closeModal();
+    runAgent1Mock(u.id);
+  }
+}
+
+async function sendChatTurn(e, userId){
+  e.preventDefault();
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  appendChatBubble("user", text);
+  setChatStatus("Agent thinking…");
+  try {
+    const resp = await fetchProxy("/api/agent1/reply", {
+      responseId: CHAT_RESPONSE_ID,
+      userMessage: text,
+    });
+    CHAT_RESPONSE_ID = resp.responseId || CHAT_RESPONSE_ID;
+    document.getElementById("chatRespId").textContent = (CHAT_RESPONSE_ID||"").slice(0,18);
+    if (resp.reply) appendChatBubble("agent", stripJsonBlock(resp.reply));
+    if (resp.done && resp.json){
+      setChatStatus("Induction complete — saving persona…");
+      applyInductionResult(userId, resp.json);
+    } else {
+      setChatStatus("Ready.");
+    }
+  } catch(err){
+    setChatStatus("Error: " + err.message);
+  }
+}
+
+function stripJsonBlock(text){
+  return text.replace(/```json[\s\S]+?```/g, "").trim() || "(agent emitted only JSON)";
+}
+
+function applyInductionResult(userId, j){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  // Safety path
+  if (j.safetyFlag){
+    u.form = j.form || { notes: "SAFETY ESCALATION — Lifeline referred. Do NOT auto-match." };
+    u.sentiment = { score:-0.9, tone:"Safety escalation — Lifeline referred", primaryEmotions:["acute distress"], activitySignals:[], recommendedApproach:"Do NOT auto-match. Coordinator escalation only." };
+    u.personaNotes = u.form.notes || "SAFETY ESCALATION";
+    u.safetyFlag = true;
+    saveDB(DB);
+    setTimeout(() => { closeModal(); render(); showCrisisModal(); }, 1200);
+    return;
+  }
+  // Happy path
+  u.form = j.form || null;
+  u.preferredVolunteerStyle = j.form?.preferredVolunteerStyle || "";
+  u.personaNotes = formSummary(j.form);  // derived one-liner for the table view
+  u.sentiment = analyzeSentiment(j.form);  // <<< sentiment analysis pass happens here
+  saveDB(DB);
+
+  // Reveal the form in the chat modal, then transition to user detail
+  const panel = document.getElementById("formPanel");
+  if (panel){
+    panel.innerHTML = renderFormPanel(j.form);
+    const senDiv = document.createElement("div");
+    senDiv.className = "mt-3";
+    senDiv.innerHTML = renderSentimentCard(u.sentiment);
+    panel.appendChild(senDiv);
+  }
+  setTimeout(() => { closeModal(); render(); openUser(userId); }, 2200);
+}
+
+/* =====================================================================
+   8. AGENT 2 (mock + live)
+   ===================================================================== */
+async function runAgent2(userId){
+  const settings = getSettings();
+  if (settings.useLive) return runAgent2Live(userId);
+  return runAgent2Mock(userId);
+}
+
+async function runAgent2Mock(userId){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  const target = document.getElementById("agent2-stream");
+  target.innerHTML = `<div class="p-3 rounded text-sm" style="background:#FFFFFF; border:1px solid var(--brand-teal-ghost);"><div class="flex items-center gap-2 text-[#1F4F5C] font-medium text-xs uppercase"><span class="w-2 h-2 rounded-full pulse-ring" style="background: var(--brand-teal);"></span> Mock Matchmaker filtering pool<span class="dot-typing"></span></div><pre class="agent-stream text-slate-700 mt-2" id="a2-log"></pre></div>`;
+  const log = document.getElementById("a2-log");
+
+  const need = u.riskLevel === "High" ? 3 : u.riskLevel === "Medium" ? 2 : 1;
+  const userLangs = parseLangs(u.language);
+  log.textContent += `Risk=${u.riskLevel} → require Accreditation ≥ ${need}\n`;
+  await sleep(300);
+  const pool = DB.volunteers.filter(v => v.status==="Available" && v.currentLoad<4 && v.accred>=need && parseLangs(v.language).some(l=>userLangs.includes(l)));
+  log.textContent += `Eligible: ${pool.map(v=>`${v.id}(load ${v.currentLoad})`).join(", ") || "(none)"}\n`;
+  await sleep(350);
+  if (!pool.length){ log.textContent += "⚠ No eligible volunteer. Escalating.\n"; return; }
+  pool.sort((a,b) => a.currentLoad-b.currentLoad || Math.abs(a.accred-need)-Math.abs(b.accred-need));
+  const pick = pool[0];
+  log.textContent += `Pick: ${pick.id} (load ${pick.currentLoad}) — lowest load among eligible.\n`;
+  await sleep(400);
+
+  u.assignedVol = pick.id;
+  pick.currentLoad++;
+  if (pick.currentLoad >= 4) pick.status = "Busy";
+  saveDB(DB);
+  setTimeout(() => { closeModal(); render(); openUser(userId); }, 600);
+}
+
+async function runAgent2Live(userId){
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  const target = document.getElementById("agent2-stream");
+  target.innerHTML = `<div class="p-3 rounded text-sm" style="background:#FFFFFF; border:1px solid var(--brand-teal-ghost);"><div class="flex items-center gap-2 text-[#1F4F5C] font-medium text-xs uppercase"><span class="w-2 h-2 rounded-full pulse-ring" style="background: var(--brand-teal);"></span> Calling live Matchmaker agent<span class="dot-typing"></span></div></div>`;
+  try {
+    const result = await fetchProxy("/api/agent2/match", {
+      userId: u.id,
+      riskLevel: u.riskLevel,
+      language: u.language,
+      personaNotes: u.personaNotes,
+      preferredStyle: u.preferredVolunteerStyle || "",
+      volunteers: DB.volunteers.map(v => ({
+        id:v.id, name:v.name, accred:v.accred, specialties:v.specialties,
+        language:v.language, currentLoad:v.currentLoad, status:v.status, persona:v.persona
+      })),
+    });
+    if (!result.volunteerId){
+      target.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">No volunteer matched. Reason: ${escapeHtml(result.reason||"—")}</div>`;
+      return;
+    }
+    const pick = DB.volunteers.find(v=>v.id===result.volunteerId);
+    if (!pick){ target.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-sm">Agent picked ${result.volunteerId} which isn't in our roster.</div>`; return; }
+    u.assignedVol = pick.id;
+    u.matchReason = result.reason || "";
+    pick.currentLoad++;
+    if (pick.currentLoad >= 4) pick.status = "Busy";
+    saveDB(DB);
+    setTimeout(() => { closeModal(); render(); openUser(userId); }, 500);
+  } catch(err){
+    target.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">Proxy error: ${escapeHtml(err.message)}. Falling back to mock.</div>`;
+    setTimeout(() => runAgent2Mock(userId), 1000);
+  }
+}
+
+function openOverride(userId){
+  const u = DB.users.find(x=>x.id===userId);
+  if (!u) return;
+  const options = DB.volunteers.filter(v => v.status === "Available" && v.currentLoad < 4)
+    .map(v => `<option value="${v.id}" ${v.id===u.assignedVol?"selected":""}>${v.id} · ${v.name} · load ${v.currentLoad} · ${v.accredLabel}</option>`).join("");
+  showModal(`
+    <div class="px-6 py-4 border-b border-slate-200 bg-purple-50 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-purple-700 uppercase tracking-wide">Admin Override · ${u.id}</div>
+        <div class="font-semibold text-slate-900">Manually reassign first-call volunteer</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <form class="px-6 py-5 space-y-4" onsubmit="submitOverride(event, '${u.id}')">
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Pick volunteer</span>
+        <select name="vol" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2">${options}</select>
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Reason for override</span>
+        <input name="reason" required class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2" placeholder="e.g. user specifically requested male volunteer" />
+      </label>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-slate-300 text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Apply Override</button>
+      </div>
+    </form>
+  `);
+}
+function submitOverride(e, userId){
+  e.preventDefault();
+  const u = DB.users.find(x=>x.id===userId);
+  const f = new FormData(e.target);
+  const newVolId = f.get("vol");
+  const old = u.assignedVol ? DB.volunteers.find(v=>v.id===u.assignedVol) : null;
+  if (old && old.id !== newVolId) {
+    old.currentLoad = Math.max(0, old.currentLoad-1);
+    if (old.currentLoad < 4 && old.status === "Busy") old.status = "Available";
+  }
+  const nv = DB.volunteers.find(v=>v.id===newVolId);
+  if (nv && nv.id !== (old&&old.id)) { nv.currentLoad++; if (nv.currentLoad>=4) nv.status="Busy"; }
+  u.assignedVol = newVolId;
+  u.matchReason = "Manual admin override: " + (f.get("reason")||"");
+  saveDB(DB);
+  closeModal();
+  render();
+  setTimeout(() => openUser(userId), 100);
+}
+
+/* =====================================================================
+   9. FIRST-CALL OUTCOME + SECOND-CALL BOT (mock for now)
+   ===================================================================== */
+function openFirstCallForm(userId){
+  const u = DB.users.find(x=>x.id===userId);
+  if (!u) return;
+  const v = DB.volunteers.find(x=>x.id===u.assignedVol);
+  showModal(`
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">First-Call Debrief</div>
+        <div class="font-semibold text-slate-900">${u.id} · with ${v?.name||"—"}</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <form class="px-6 py-5 space-y-4" onsubmit="submitFirstCall(event,'${u.id}')">
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Engagement Quality</span>
+        <select name="engagement" required class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2">
+          <option>High — opened up, agreed to next contact</option>
+          <option>Medium — talked but guarded</option>
+          <option>Low — minimal engagement / cut short</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Key Themes Discussed</span>
+        <input name="themes" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2" placeholder="e.g. financial pressure, sleep, isolation" />
+      </label>
+      <label class="flex items-start gap-2">
+        <input type="checkbox" name="escalation" class="mt-1" />
+        <span class="text-sm text-slate-700">Escalation needed (safety concern or specialist required)</span>
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Volunteer Notes</span>
+        <textarea name="notes" rows="3" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2"></textarea>
+      </label>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-slate-300 text-slate-700">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-md bg-amber-600 text-white font-medium hover:bg-amber-700">Save & Trigger Bot</button>
+      </div>
+    </form>
+  `);
+}
+function submitFirstCall(e, userId){
+  e.preventDefault();
+  const u = DB.users.find(x=>x.id===userId);
+  const f = new FormData(e.target);
+  u.firstCall = {
+    engagement: f.get("engagement").split(" — ")[0],
+    themes: f.get("themes")||"",
+    escalation: f.get("escalation") === "on",
+    notes: f.get("notes")||"",
+    loggedAt: new Date().toISOString().slice(0,16).replace("T"," "),
+  };
+  saveDB(DB);
+  closeModal();
+  render();
+  setTimeout(() => openUser(userId), 150);
+}
+async function runSecondCallBot(userId){
+  const u = DB.users.find(x=>x.id===userId);
+  if (!u || !u.firstCall) return;
+  const target = document.getElementById("bot-stream");
+  target.innerHTML = `<div class="p-3 bg-white border border-purple-200 rounded text-sm"><div class="flex items-center gap-2 text-purple-700 font-medium text-xs uppercase"><span class="w-2 h-2 rounded-full bg-purple-500 pulse-ring"></span> Decision bot reasoning<span class="dot-typing"></span></div><pre class="agent-stream text-slate-700 mt-2" id="bot-log"></pre></div>`;
+  const log = document.getElementById("bot-log");
+  const fc = u.firstCall;
+  const currentVol = DB.volunteers.find(v=>v.id===u.assignedVol);
+  let strategy, reason, pick=null;
+  if (fc.escalation){ strategy="escalate"; reason="Escalation flagged → require Crisis tier."; }
+  else if (fc.engagement === "High"){ strategy="continuity"; reason="High engagement → keep volunteer for rapport."; }
+  else if (fc.engagement === "Low"){ strategy="switch_style"; reason="Low engagement → switch persona style."; }
+  else { strategy="continuity"; reason="Medium engagement → default to continuity."; }
+  log.textContent += `Strategy: ${strategy.toUpperCase()} — ${reason}\n`;
+  await sleep(500);
+  const userLangs = parseLangs(u.language);
+  if (strategy==="continuity" && currentVol?.status==="Available" && currentVol.currentLoad<5) pick=currentVol;
+  else if (strategy==="escalate"){
+    const p = DB.volunteers.filter(v=>v.accred===3 && v.status==="Available" && v.currentLoad<4 && parseLangs(v.language).some(l=>userLangs.includes(l)));
+    p.sort((a,b)=>a.currentLoad-b.currentLoad); pick=p[0];
+  } else if (strategy==="switch_style"){
+    const sw = (currentVol?.persona||"").toLowerCase().split(/[,\s]+/);
+    const p = DB.volunteers.filter(v=>v.id!==currentVol?.id && v.status==="Available" && v.currentLoad<4 && v.accred>=(currentVol?.accred||1) && parseLangs(v.language).some(l=>userLangs.includes(l)));
+    p.sort((a,b)=>{
+      const o = w => w.toLowerCase().split(/[,\s]+/).filter(t=>t&&sw.includes(t)).length;
+      const d = o(a.persona)-o(b.persona);
+      return d!==0?d:a.currentLoad-b.currentLoad;
+    });
+    pick = p[0];
+  }
+  if (!pick) pick = currentVol;
+  log.textContent += `Pick: ${pick.id} (${pick.name}).\n`;
+  u.secondCallVol = pick.id;
+  u.secondCallReason = reason + ` Selected ${pick.name} (${pick.id}).`;
+  if (pick.id !== currentVol?.id){ pick.currentLoad++; if (pick.currentLoad>=4) pick.status="Busy"; }
+  saveDB(DB);
+  setTimeout(()=>{ closeModal(); render(); openUser(userId); }, 700);
+}
+function markCompleted(userId){
+  const u = DB.users.find(x=>x.id===userId);
+  u.status = "Completed";
+  saveDB(DB);
+  closeModal();
+  render();
+}
+
+/* =====================================================================
+   10. CRISIS GUARDRAIL
+   ===================================================================== */
+document.getElementById("crisisBtn").addEventListener("click", showCrisisModal);
+function showCrisisModal(){
+  showModal(`
+    <div class="bg-red-600 text-white px-6 py-5">
+      <div class="text-xs uppercase tracking-wider opacity-90">Safety Guardrail Activated</div>
+      <div class="text-xl font-bold mt-1">If you or the person you're speaking with is in immediate danger</div>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div class="text-3xl font-bold text-red-700">Lifeline · 13 11 14</div>
+      <p class="text-slate-700">Lifeline is a 24/7 crisis support line across Australia. Every agent in the pipeline interrupts its task to surface this number when it detects related language.</p>
+      <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
+        <strong>Other immediate resources:</strong>
+        <ul class="list-disc pl-5 mt-1 space-y-0.5">
+          <li>Suicide Call Back Service — 1300 659 467</li>
+          <li>Beyond Blue — 1300 22 4636</li>
+          <li>13YARN (First Nations) — 13 92 76</li>
+          <li>Emergency — 000</li>
+        </ul>
+      </div>
+      <div class="text-right">
+        <button onclick="closeModal()" class="px-4 py-2 rounded-md bg-slate-900 text-white">Acknowledge</button>
+      </div>
+    </div>
+  `);
+}
+document.addEventListener("submit", (e) => {
+  const danger = /\b(end it|kill (myself|him|her)|want to die|no point|suicid|self.?harm)\b/i;
+  const fd = new FormData(e.target);
+  for (const [,val] of fd.entries()){
+    if (typeof val === "string" && danger.test(val)){
+      setTimeout(showCrisisModal, 400);
+      break;
+    }
+  }
+}, true);
+
+/* =====================================================================
+   11. SETTINGS / LIVE MODE TOGGLE
+   ===================================================================== */
+function openSettings(){
+  const s = getSettings();
+  showModal(`
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide">Settings</div>
+        <div class="font-semibold text-slate-900">Live Mode &amp; Proxy</div>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+    </div>
+    <form class="px-6 py-5 space-y-4" onsubmit="saveSettings(event)">
+      <label class="flex items-start gap-3">
+        <input type="checkbox" name="useLive" ${s.useLive?"checked":""} class="mt-1" />
+        <span>
+          <span class="text-sm font-medium text-slate-700">Use Live Foundry Agents</span>
+          <span class="block text-xs text-slate-500">When ON, the portal calls the local proxy server which forwards to Azure AI Foundry. When OFF, the JS mock runs (great for offline demos).</span>
+        </span>
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700">Proxy URL</span>
+        <input name="proxyUrl" value="${escapeHtml(s.proxyUrl)}" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2 font-mono text-sm" />
+        <span class="text-xs text-slate-500">Default: http://127.0.0.1:5000 (the local Flask proxy)</span>
+      </label>
+      <div class="bg-slate-50 border border-slate-200 rounded p-3 text-xs text-slate-700">
+        <strong>Proxy status:</strong> <span id="proxyStatusText">checking…</span>
+      </div>
+      <div class="flex justify-between items-center pt-2">
+        <button type="button" onclick="testConnection()" class="text-sm text-[#1F4F5C] underline">Test connection</button>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-slate-300 text-slate-700">Cancel</button>
+          <button type="submit" class="btn-brand px-4 py-2 rounded-md font-medium">Save</button>
+        </div>
+      </div>
+    </form>
+  `);
+  testConnection();
+}
+function saveSettings(e){
+  e.preventDefault();
+  const f = new FormData(e.target);
+  setSettings({ useLive: f.get("useLive") === "on", proxyUrl: f.get("proxyUrl").trim() });
+  closeModal();
+  pingProxy();
+}
+
+/* =====================================================================
+   12. PROXY FETCH HELPER + CONNECTION BADGE
+   ===================================================================== */
+async function fetchProxy(path, body){
+  const s = getSettings();
+  const url = s.proxyUrl.replace(/\/+$/,"") + path;
+  const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+async function pingProxy(){
+  const s = getSettings();
+  const dot = document.getElementById("connDot");
+  const label = document.getElementById("connLabel");
+  const badge = document.getElementById("connBadge");
+  badge.classList.remove("hidden");
+  if (!s.useLive){
+    dot.className = "w-2 h-2 rounded-full bg-slate-400";
+    label.textContent = "Mock mode";
+    return;
+  }
+  try {
+    const r = await fetch(s.proxyUrl.replace(/\/+$/,"") + "/api/health", { method:"GET" });
+    const data = await r.json();
+    if (data.ok && data.agent1_configured){
+      dot.className = "w-2 h-2 rounded-full bg-emerald-500 conn-pulse";
+      label.textContent = data.agent2_configured ? "Live (A1+A2)" : "Live (A1 only)";
+    } else {
+      dot.className = "w-2 h-2 rounded-full bg-amber-500 conn-pulse";
+      label.textContent = "Proxy up, agents missing";
+    }
+  } catch(e){
+    dot.className = "w-2 h-2 rounded-full bg-red-500 conn-pulse";
+    label.textContent = "Proxy unreachable";
+  }
+}
+async function testConnection(){
+  const el = document.getElementById("proxyStatusText");
+  if (!el) return;
+  el.textContent = "checking…";
+  const s = getSettings();
+  try {
+    const r = await fetch(s.proxyUrl.replace(/\/+$/,"") + "/api/health");
+    const data = await r.json();
+    el.innerHTML = `proxy reachable ✓ · key set: <strong>${data.key_present}</strong> · Agent 1 configured: <strong>${data.agent1_configured}</strong> · Agent 2 configured: <strong>${data.agent2_configured}</strong>`;
+  } catch(e){
+    el.innerHTML = `<span class="text-red-700">cannot reach proxy at ${escapeHtml(s.proxyUrl)} — make sure <code>python proxy_server.py</code> is running.</span>`;
+  }
+}
+
+/* =====================================================================
+   13. UTIL
+   ===================================================================== */
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function parseLangs(s){ return (s||"").toLowerCase().split(/[,\/]\s*/).map(x=>x.trim()).filter(Boolean); }
+
+/* =====================================================================
+   14. BOOT
+   ===================================================================== */
+setViewMode(VIEW_MODE);
+applyRole();
+setInterval(pingProxy, 15000);
+</script>
+</body>
+</html>
